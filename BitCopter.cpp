@@ -42,14 +42,14 @@ const BIT_Scheduler::Task Copter::scheduler_tasks[] =
 //      { SCHED_TASK(record_wp),                                                   100,    1100 },
 //      { SCHED_TASK(record_config),                                                   100,    1100 },
 //      { SCHED_TASK(get_timedata_now),                                     100,    1100 },
-      { SCHED_TASK(loop_slow),                                                    100,    1100 },
+      { SCHED_TASK(loop_slow),                                                    1000,    1100 },
 
       { SCHED_TASK(end_of_task),                                               1000,    1100 }
 };
 
-#define MAINTASK_TICK_TIME_MS 1000//这个设置为10ms，对应每个循环100hz
+#define MAINTASK_TICK_TIME_MS 10//这个设置为10ms，对应每个循环100hz
 int seconds=0;
-int micro_seconds=MAINTASK_TICK_TIME_MS*(1e3);/*每个tick为20毫秒，也就是20000微秒*/
+int micro_seconds=MAINTASK_TICK_TIME_MS*(1e3);/*每个tick的微秒数*/
 struct timeval maintask_tick;
 
 //struct T_GLOBAL_BOOL_BOATPILOT  global_bool_boatpilot;
@@ -66,7 +66,7 @@ int main(int argc,char * const argv[])
     printf(" sizeof(scheduler_tasks)/sizeof(scheduler_tasks[0]) = %d\n",sizeof(copter.scheduler_tasks)/sizeof(copter.scheduler_tasks[0]));
 
     //初始化步骤，初始化一些设备或者参数等
-//    boat.setup();
+    copter.setup();
 
     while (1)
     {
@@ -75,7 +75,6 @@ int main(int argc,char * const argv[])
         select(0, NULL, NULL, NULL, &maintask_tick);
 
         copter.loop();
-        printf("Welcome to BitPilot \n");
     }
 
     return 0;

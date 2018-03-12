@@ -9,3 +9,8 @@
 
 Copter copter;
 
+void Copter::setup( void )
+{
+	 init_futaba();
+}
+

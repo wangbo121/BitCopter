@@ -28,6 +28,8 @@
 #include "global.h"
 #include "utility.h"
 
+#include "read_futaba.h"
+
 //#include "radio.h"
 //#include "save_data.h"
 //#include "pid.h"

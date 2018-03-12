@@ -19,6 +19,7 @@
 #define DEBUG_PRINTF(fmt,args...) /*do nothing */
 #endif
 
+#define UART_FUTABA "/dev/ttyO1"
 
 
 
