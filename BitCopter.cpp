@@ -8,11 +8,6 @@
 #include "Copter.h"
 
 /*
- * 仿真测试使用
- */
-//Watercraft sim_water_craft("32.68436,117.05525,10,0","+");//+型机架，起始高度为10，yaw是0
-
-/*
  * 这是任务调度表，除了fast_loop中的任务，其他任务都在这里执行
  * 中间的数字是执行频率，也就是经过多少个tick执行一次这个任务(目前我写的是10ms一个tick)
  * 最右边的数字是最大允许的时间，单位是微妙
@@ -52,24 +47,27 @@ int seconds=0;
 int micro_seconds=MAINTASK_TICK_TIME_MS*(1e3);/*每个tick的微秒数*/
 struct timeval maintask_tick;
 
-//struct T_GLOBAL_BOOL_BOATPILOT  global_bool_boatpilot;
-
 int main(int argc,char * const argv[])
 {
     printf("Welcome to BitPilot \n");
 
-    //decode_binary_data();
-    //decode_binary_wp_data();
-
-    // 初始化任务调度表
-    copter.scheduler.init(&copter.scheduler_tasks[0], sizeof(copter.scheduler_tasks)/sizeof(copter.scheduler_tasks[0]));
-    printf(" sizeof(scheduler_tasks)/sizeof(scheduler_tasks[0]) = %d\n",sizeof(copter.scheduler_tasks)/sizeof(copter.scheduler_tasks[0]));
-
-    //初始化步骤，初始化一些设备或者参数等
+    /*
+     * 1外围的硬件设备初始化，这些硬件是底层设备，跟飞控软件分开
+     * 2飞控程序的初始化，初始化导航制导控制参数等以及全局参数
+     */
     copter.setup();
+
+    /*
+     * 除了姿态控制环之外的其他任务的调度表
+     */
+    copter.scheduler.init(&copter.scheduler_tasks[0], sizeof(copter.scheduler_tasks)/sizeof(copter.scheduler_tasks[0]));
+    printf("There are %ld task to run!!!\n",sizeof(copter.scheduler_tasks)/sizeof(copter.scheduler_tasks[0]));
 
     while (1)
     {
+    	/*
+    	 * select定时器，每10ms运行一次loop
+    	 */
         maintask_tick.tv_sec = seconds;
         maintask_tick.tv_usec = micro_seconds;
         select(0, NULL, NULL, NULL, &maintask_tick);
@@ -112,39 +110,121 @@ void Copter::loop( void )
 
 void Copter::loop_fast()
 {
-    /*
-     * 这个loop_fast如果针对于飞机来说就是控制姿态的内环控制，
-     * 无人机的导航控制环节在scheduler数组的执行中。
-     * 如果对于无人船来说，暂时作为导航和控制环
-     */
+	/*
+	 * 将来跟硬件驱动获取数据整合时,这个函数是不需要的,现在是模拟,所以才需要
+	 */
+	//20170918添加了all_external_device_input和output一直循环从驱动中获取数据，至于硬件驱动到底多大频率获取的我不管，我只是每次从这里获取数据
+	//update_all_external_device_input();
+	//update_mavlink_reatime();
 
-    /*
-     * 如果全部传感器都是硬件在环的，那么这里就不需要这个update_all_external_device_input
-     * 如果传感器都硬件在环，那么就在数据有更新的时候，把数据填在这个结构中
-     * 相当于在传感器和控制循环中间又添加了一层
-     */
-    //update_all_external_device_input();
+	/*
+	 * wangbo20170801
+	 * 其实如果只是增稳控制的话
+	 * 只需要下面5步骤就可以了
+	 * 其他的都是用来与地面站通信然后实现自动驾驶的，比如气压计，空速计，gps，导航，航点等
+	 * 1--read_radio
+	 * 2--update_DCM
+	 * 3--update_current_flight_mode
+	 * 4--control根据飞行模式 control_mode的选项，选择不同的控制方式
+	 * 5--set_servos
+	 */
 
-    /*1. decode_gcs2ap_radio*/
-    //decode_gcs2ap_radio();
+	G_Dt=0.01;//G_Dt是dcm积分要用的，这个设置为0.01秒也就是100hz主要是为了跟sim_aircraft的速率一致，但是其实20ms(50hz)就够
 
-    /*2. navigation*/
-    //navigation_loop(&auto_navigation,wp_data,&gps_data);
+	/* 1--读取接收机的信号，获取遥控器各个通道 */
+	read_radio();
+	//下面的设置遥控器其实是不需要的，应该按照从地面站或者从遥控器的第五通道来决定飞行模式
+	//g.channel_rudder.set_pwm(1600);//这个set_pwm参数的范围是1000～2000
+	//g.channel_pitch.set_pwm(1600);//这个set_pwm参数的范围是1000～2000，把pitch一直设置为1600，看能不能稳定在9度左右
+	//g.rc_5.set_pwm(1400);//rc_5大于1500时，是增稳控制状态
+	//g.rc_5.set_pwm(1600);//rc_5大于1500时，是增稳控制状态
+	//g.rc_5.set_pwm(1990);//rc_5大于1900时，是绕航点飞行状态
 
-    /*3 control*/
-   // control_loop();
+	/* 2--更新姿态，获取飞机现在的姿态角 */
+	imu.update();
+	//compass.read();
+	//这里本来应该有一个获取gps数据的，但是100hz更新gps数据没有太大的意义，并且在程序中我们需要用gps来计算实际的朝东和朝北的速度，
+	//如果gps更新太快，导致每次更新gps时，老的经纬度和新的经纬度几乎是一样的
+	//导致计算的actual_speed是0
+	//update_GPS();//gps read只是读取数据 update_GPS里面还需要给current_loc赋值//20170919放在这里太快了,还是放在10hz的里面好点
+	/*
+	 * 因为下面的ahrs中需要imu gps compass的数据，
+	 * 所以需要先读取那些传感器的数据
+	 */
+	ahrs.update_DCM(G_Dt);//20170920目前ahrs更新时还没有用drift_correction，也就是没有用gps的数据，但是后面可能是要加上的
 
+	/* 3--update_current_flight_mode 更新控制状态，从而选择控制方式
+	 * 设置yaw_mode roll_pitch_mode throttle_mode的模式
+	 * 然后update_roll_pitch_mode，update_yaw_mode，update_throttle_mode要用
+	 */
+	update_current_flight_mode();
 
-//    /*
-//     * 下面是把驾驶仪计算得到的电机或者舵机的输出给到simulator模拟器中
-//     */
-//    servos_set_out[0] = (uint16_t)(ctrloutput.rudder_pwm);
-//    servos_set_out[1] = (uint16_t)(ctrloutput.mmotor_onoff_pwm);
-//
-//    memcpy(input.servos,servos_set_out,sizeof(servos_set_out));
-//
-//    sim_water_craft.update(input);
-//    sim_water_craft.fill_fdm(fdm);
+	/* 4--把期望的roll pitch yaw作用于飞机 */
+	switch(control_mode)
+	{
+	case STABILIZE:
+		/*
+		* 先是roll pitch yaw的2级pid控制
+		* 再是油门throttle的2级pid控制
+		* 都是只是计算得出g.channel.servo_out的值
+		* 在motors_output时再把这些计算的值真正输出
+		* update_roll_pitch_mode和update_yaw_mode都是只有p控制器，计算得到目标姿态角度
+		*/
+		update_roll_pitch_mode();
+		update_yaw_mode();//上面这两个函数有问题呀，上面两个函数赋值给的是EARTH_FRAME，但是下面的run_rate_controllers是用的BODY_FRAME，所以还需要仔细再看一下apm
+
+		//这个是更新内环的速率控制器的目标，update targets to rate controllers
+		update_rate_contoller_targets();//这个步骤很重要，是把上面的earth坐标系下的计算数值量转为机体坐标系下的
+
+		//这个是执行了角速度的控制器，需要从ahrs或者imu获取角速度的大小，扩大了100倍，这个函数还得看一下
+		run_rate_controllers();
+
+		//这个是油门的控制，跟姿态的控制分开，油门的更新速率不需要那么快，油门的更新放在了medium_loop中了，5分之1的loop的频率，如果是50hz的话，那么就是10hz，100ms更新一次
+		//update_throttle_mode();//计算油门量的输出值
+		break;
+	case ACRO:
+		// call rate controllers
+		//g.channel_roll.servo_out = g.channel_roll.control_in;
+		//g.channel_pitch.servo_out = g.channel_pitch.control_in;
+		//g.channel_rudder.servo_out = g.channel_rudder.control_in;
+
+		//g.channel_throttle.servo_out=g.channel_throttle.control_in;
+		break;
+	case AUTO:
+		/*
+		* 先是roll pitch yaw的2级pid控制
+		* 再是油门throttle的2级pid控制
+		* 都是只是计算得出g.channel.servo_out的值
+		* 在motors_output时再把这些计算的值真正输出
+		* update_roll_pitch_mode和update_yaw_mode都是只有p控制器，计算得到目标姿态角度
+		*/
+		//update_roll_pitch_mode();
+		//update_yaw_mode();//上面这两个函数有问题呀，上面两个函数赋值给的是EARTH_FRAME，但是下面的run_rate_controllers是用的BODY_FRAME，所以还需要仔细再看一下apm
+
+		//这个是更新内环的速率控制器的目标，update targets to rate controllers
+		//update_rate_contoller_targets();//这个步骤很重要，是把上面的earth坐标系下的转为机体坐标系
+
+		//这个是执行了角速度的控制器，需要从ahrs或者imu获取角速度的大小，扩大了100倍，这个函数还得看一下
+		//run_rate_controllers();
+
+		//这个是油门的控制，跟姿态的控制分开，油门的更新放在了medium_loop中了，5分之1的loop的频率，如果是50hz的话，那么就是10hz，100ms更新一次
+		//update_throttle_mode();//计算油门量的输出值
+		break;
+	default:
+		break;
+	}
+
+	/* 5--把计算所得控制量输出给电机 */
+	//motors_output();
+#if 0
+	if(takeoff_complete == false)
+	{
+		//没有起飞之前，把所有的积分项都清零
+		// reset these I terms to prevent awkward tipping on takeoff
+		reset_rate_I();
+		reset_stability_I();
+	}
+#endif
 }
 
 void Copter::loop_slow()
@@ -154,5 +234,5 @@ void Copter::loop_slow()
 
 void Copter::end_of_task()
 {
-	//DEBUG_PRINTF("Hello end_of_task\n");
+	DEBUG_PRINTF("Hello end_of_task\n");
 }

@@ -26,12 +26,12 @@ typedef struct TYPE_All_EXTERNAL_DEVICE_INPUT
 	float heading;//度
 
 	//imu
-	float _gyro_x;//弧度每秒
-	float _gyro_y;//弧度每秒
-	float _gyro_z;//弧度每秒
-	float _accel_x;//米每二次方秒
-	float _accel_y;//米每二次方秒
-	float _accel_z;//米每二次方秒
+	float gyro_x;//弧度每秒
+	float gyro_y;//弧度每秒
+	float gyro_z;//弧度每秒
+	float accel_x;//米每二次方秒
+	float accel_y;//米每二次方秒
+	float accel_z;//米每二次方秒
 
 	//rc 遥控器信号输入
 	float rc_raw_in_0;//1000～2000
