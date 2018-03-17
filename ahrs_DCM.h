@@ -24,7 +24,7 @@
 class AP_DCM
 {
 public:
-#if 1
+#if 0
 	// Constructors
 	AP_DCM(IMU &imu ) :
 		_imu(imu),
@@ -34,8 +34,16 @@ public:
 		_course_over_ground_x(0),
 		_course_over_ground_y(1)
 	{}
+#else
+	// Constructors
+	AP_DCM() :
+		_dcm_matrix(1, 0, 0,
+					0, 1, 0,
+					0, 0, 1),
+		_course_over_ground_x(0),
+		_course_over_ground_y(1)
+	{}
 #endif
-
 	//AP_DCM();
 
 
@@ -81,7 +89,7 @@ private:
 	void 		drift_correction(void);
 	void 		euler_angles(void);
 
-	IMU 		&_imu;//这个必须第一位，因为定义ahrs_DCM时用到了初始化
+	IMU 		_imu;//这个必须第一位，因为定义ahrs_DCM时用到了初始化
 
 	Matrix3f	_dcm_matrix;
 

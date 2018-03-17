@@ -5,7 +5,7 @@
  *      Author: wangbo
  */
 
-//#include "copter.h"
+//#include "Copter.h"
 #include <stdio.h>
 #include "Parameters.h"
 

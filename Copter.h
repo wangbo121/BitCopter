@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <stdarg.h>
 #include <fcntl.h>//创建文件
@@ -30,13 +31,13 @@
 
 #include "rc.h"
 #include "rc_channel.h"
+#include "rc_futaba.h"
 #include "IMU.h"
+#include "IMU_6050.h"
 #include "ahrs_DCM.h"
 #include "Parameters.h"
 #include "BIT_MATH.h"
-
-
-#include "read_futaba.h"
+#include "all_external_device.h"
 
 //#include "radio.h"
 //#include "save_data.h"
@@ -103,7 +104,7 @@ public:
 
 	IMU imu;
 	//AP_DCM ahrs={imu};
-	AP_DCM ahrs{imu};
+	AP_DCM ahrs;
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Rate contoller targets
@@ -129,6 +130,12 @@ public:
 	float sin_yaw_y;
 	float sin_roll;
 	float sin_pitch;
+
+
+	float sin_pitch_y;
+	//float sin_yaw_y,
+	float sin_roll_y;
+
 
 	// Altitude
 	// The cm/s we are moving up or down based on filtered data - Positive = UP
@@ -226,9 +233,13 @@ public:
     //Parameters g;
 
     private:
-	void read_radio();
-	void init_rc_in();
-	void init_rc_out();
+	//void read_radio();
+	void rc_in_init();
+	void rc_out_init();
+	void parameter_init();
+	void controller_init();
+
+
 	void trim_radio();
 
 	void update_current_flight_mode(void);
@@ -294,6 +305,7 @@ public:
 	void motors_output();
 	void update_throttle_mode();
 
+	void read_radio();
 
 
 	/*

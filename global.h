@@ -107,5 +107,7 @@
 #define min(a,b) ((a)<(b)?(a):(b))
 #define max(a,b) ((a)>(b)?(a):(b))
 
+#define AP_MOTORS_MAX_NUM_MOTORS 12
+
 
 #endif /* GLOBAL_H_ */

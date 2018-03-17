@@ -112,10 +112,10 @@ void Copter::loop_fast()
 {
 	/*
 	 * 将来跟硬件驱动获取数据整合时,这个函数是不需要的,现在是模拟,所以才需要
+	 * 20170918添加了all_external_device_input和output一直循环从驱动中获取数据，
+	 * 至于硬件驱动到底多大频率获取的我不管，我只是每次从这里获取数据
 	 */
-	//20170918添加了all_external_device_input和output一直循环从驱动中获取数据，至于硬件驱动到底多大频率获取的我不管，我只是每次从这里获取数据
-	//update_all_external_device_input();
-	//update_mavlink_reatime();
+	update_all_external_device_input();
 
 	/*
 	 * wangbo20170801
@@ -131,7 +131,9 @@ void Copter::loop_fast()
 
 	G_Dt=0.01;//G_Dt是dcm积分要用的，这个设置为0.01秒也就是100hz主要是为了跟sim_aircraft的速率一致，但是其实20ms(50hz)就够
 
-	/* 1--读取接收机的信号，获取遥控器各个通道 */
+	/*
+	 * 1--读取接收机的信号，获取遥控器各个通道
+	 */
 	read_radio();
 	//下面的设置遥控器其实是不需要的，应该按照从地面站或者从遥控器的第五通道来决定飞行模式
 	//g.channel_rudder.set_pwm(1600);//这个set_pwm参数的范围是1000～2000
@@ -140,26 +142,16 @@ void Copter::loop_fast()
 	//g.rc_5.set_pwm(1600);//rc_5大于1500时，是增稳控制状态
 	//g.rc_5.set_pwm(1990);//rc_5大于1900时，是绕航点飞行状态
 
-	/* 2--更新姿态，获取飞机现在的姿态角 */
-	imu.update();
-	//compass.read();
-	//这里本来应该有一个获取gps数据的，但是100hz更新gps数据没有太大的意义，并且在程序中我们需要用gps来计算实际的朝东和朝北的速度，
-	//如果gps更新太快，导致每次更新gps时，老的经纬度和新的经纬度几乎是一样的
-	//导致计算的actual_speed是0
-	//update_GPS();//gps read只是读取数据 update_GPS里面还需要给current_loc赋值//20170919放在这里太快了,还是放在10hz的里面好点
 	/*
-	 * 因为下面的ahrs中需要imu gps compass的数据，
-	 * 所以需要先读取那些传感器的数据
-	 */
-	ahrs.update_DCM(G_Dt);//20170920目前ahrs更新时还没有用drift_correction，也就是没有用gps的数据，但是后面可能是要加上的
-
-	/* 3--update_current_flight_mode 更新控制状态，从而选择控制方式
+	 * 3--刷新控制状态，从而选择控制方式
 	 * 设置yaw_mode roll_pitch_mode throttle_mode的模式
 	 * 然后update_roll_pitch_mode，update_yaw_mode，update_throttle_mode要用
 	 */
 	update_current_flight_mode();
 
-	/* 4--把期望的roll pitch yaw作用于飞机 */
+	/*
+	 * 4--把期望的roll pitch yaw作用于飞机
+	 */
 	switch(control_mode)
 	{
 	case STABILIZE:
@@ -180,43 +172,28 @@ void Copter::loop_fast()
 		run_rate_controllers();
 
 		//这个是油门的控制，跟姿态的控制分开，油门的更新速率不需要那么快，油门的更新放在了medium_loop中了，5分之1的loop的频率，如果是50hz的话，那么就是10hz，100ms更新一次
-		//update_throttle_mode();//计算油门量的输出值
+		update_throttle_mode();//计算油门量的输出值，这个先放在这里，按道理应该放在50hz的循环里
 		break;
 	case ACRO:
 		// call rate controllers
-		//g.channel_roll.servo_out = g.channel_roll.control_in;
-		//g.channel_pitch.servo_out = g.channel_pitch.control_in;
-		//g.channel_rudder.servo_out = g.channel_rudder.control_in;
+		g.channel_roll.servo_out = g.channel_roll.control_in;
+		g.channel_pitch.servo_out = g.channel_pitch.control_in;
+		g.channel_rudder.servo_out = g.channel_rudder.control_in;
 
-		//g.channel_throttle.servo_out=g.channel_throttle.control_in;
-		break;
-	case AUTO:
-		/*
-		* 先是roll pitch yaw的2级pid控制
-		* 再是油门throttle的2级pid控制
-		* 都是只是计算得出g.channel.servo_out的值
-		* 在motors_output时再把这些计算的值真正输出
-		* update_roll_pitch_mode和update_yaw_mode都是只有p控制器，计算得到目标姿态角度
-		*/
-		//update_roll_pitch_mode();
-		//update_yaw_mode();//上面这两个函数有问题呀，上面两个函数赋值给的是EARTH_FRAME，但是下面的run_rate_controllers是用的BODY_FRAME，所以还需要仔细再看一下apm
-
-		//这个是更新内环的速率控制器的目标，update targets to rate controllers
-		//update_rate_contoller_targets();//这个步骤很重要，是把上面的earth坐标系下的转为机体坐标系
-
-		//这个是执行了角速度的控制器，需要从ahrs或者imu获取角速度的大小，扩大了100倍，这个函数还得看一下
-		//run_rate_controllers();
-
-		//这个是油门的控制，跟姿态的控制分开，油门的更新放在了medium_loop中了，5分之1的loop的频率，如果是50hz的话，那么就是10hz，100ms更新一次
-		//update_throttle_mode();//计算油门量的输出值
+		g.channel_throttle.servo_out=g.channel_throttle.control_in;
 		break;
 	default:
 		break;
 	}
 
 	/* 5--把计算所得控制量输出给电机 */
-	//motors_output();
-#if 0
+	motors_output();
+
+	/*
+	 * 2--更新姿态，获取飞机现在的姿态角
+	 */
+	ahrs.update_DCM(G_Dt);
+
 	if(takeoff_complete == false)
 	{
 		//没有起飞之前，把所有的积分项都清零
@@ -224,15 +201,4 @@ void Copter::loop_fast()
 		reset_rate_I();
 		reset_stability_I();
 	}
-#endif
-}
-
-void Copter::loop_slow()
-{
-    DEBUG_PRINTF("Hello loop_slow\n");
-}
-
-void Copter::end_of_task()
-{
-	DEBUG_PRINTF("Hello end_of_task\n");
 }

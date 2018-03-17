@@ -137,56 +137,13 @@ IMU::_sensor_in(uint8_t channel, int temperature)
 bool
 IMU::update(void)
 {
-	int tc_temp =0;
-	//int tc_temp = _adc->Ch(_gyro_temp_ch);
-	//上面这句话是读取imu的数据，然后下面赋值
-#if 0
-	// convert corrected gyro readings to delta acceleration
-	//
-	_gyro.x = ToRad(_gyro_gain_x) * _sensor_in(0, tc_temp);
-	_gyro.y = ToRad(_gyro_gain_y) * _sensor_in(1, tc_temp);
-	_gyro.z = ToRad(_gyro_gain_z) * _sensor_in(2, tc_temp);
-
-	// convert corrected accelerometer readings to acceleration
-	//
-	_accel.x = _accel_scale * _sensor_in(3, tc_temp);
-	_accel.y = _accel_scale * _sensor_in(4, tc_temp);
-	_accel.z = _accel_scale * _sensor_in(5, tc_temp);
-
-
-	_gyro.x = ToRad(0.4) ;
-	_gyro.y = ToRad(0.4);
-	_gyro.z = ToRad(0.4 );
-
-	// convert corrected accelerometer readings to acceleration
-	//
-//	_accel.x = _accel_scale * 423.0 ;
-//	_accel.y = _accel_scale *423.0 ;
-	_accel.x = 0.0 ;
-	_accel.y = 0.0 ;
-	_accel.z = _accel_scale * 423.0 ;
-#endif
 	/*
 	 * 总之，这个函数是必须不断获取acc gyro的数据，把数据给到_gyro，_accel这个三维向量里
 	 * 然后才能把数据给到ahrs
 	 * 然后更新dcm矩阵
-	 */
-
-#if 0
-	_gyro.x = fdm_feed_back.phidot;
-	_gyro.y = fdm_feed_back.thetadot;
-	_gyro.z = fdm_feed_back.psidot;
-
-	_accel.x = fdm_feed_back.A_X_pilot;
-	_accel.y = fdm_feed_back.A_Y_pilot;
-	_accel.z = fdm_feed_back.A_Z_pilot;
-#else
-	/*
-	 * 上面的其实不需要了
 	 * 硬件驱动把更新的数据赋值给all_external_device_input
 	 * 我的飞控软件自成体系，从all_external_device_input获取数据就可以了
 	 */
-
 	_gyro.x = all_external_device_input.gyro_x;
 	_gyro.y = all_external_device_input.gyro_y;
 	_gyro.z = all_external_device_input.gyro_z;
@@ -194,8 +151,7 @@ IMU::update(void)
 	_accel.x = all_external_device_input.accel_x;
 	_accel.y = all_external_device_input.accel_y;
 	_accel.z = all_external_device_input.accel_z;
-#endif
-	// always updated
+
 	return true;
 }
 
