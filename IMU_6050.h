@@ -14,7 +14,7 @@
  */
 int IMU_6050_init();
 
-int IMU_6050_read_data();
+void IMU_6050_read_data();
 
 
 #endif /* IMU_6050_H_ */

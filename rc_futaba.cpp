@@ -30,7 +30,7 @@ int rc_futaba_init()
 	 */
     uart_device_futaba.uart_num=open_uart_dev(uart_device_futaba.uart_name);
 
-    uart_device_futaba.ptr_fun=rc_futaba_read_data;
+    //uart_device_futaba.ptr_fun=rc_futaba_read_data;
 
     set_uart_opt( uart_device_futaba.uart_name, \
                   uart_device_futaba.baudrate,\
@@ -43,22 +43,26 @@ int rc_futaba_init()
     return 0;
 }
 
-int rc_futaba_read_data(unsigned char *buf, unsigned int len)
+//int rc_futaba_read_data(unsigned char *buf, unsigned int len)
+//{
+//
+//#if 1
+//	char buf_temp[200];
+//	memcpy(buf_temp, buf, len);
+//	buf_temp[len+1]='\0';
+//
+//	printf("futaba收到的数据：\n");
+//
+//	for (unsigned int i = 0; i < len; i++)
+//	{
+//		printf("  %x", buf_temp[i]);
+//	}
+//	printf("\n");
+//#endif
+//
+//	return 0;
+//}
+void rc_futaba_read_data()
 {
 
-#if 1
-	char buf_temp[200];
-	memcpy(buf_temp, buf, len);
-	buf_temp[len+1]='\0';
-
-	printf("futaba收到的数据：\n");
-
-	for (unsigned int i = 0; i < len; i++)
-	{
-		printf("  %x", buf_temp[i]);
-	}
-	printf("\n");
-#endif
-
-	return 0;
 }

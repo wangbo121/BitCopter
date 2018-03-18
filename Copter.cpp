@@ -56,22 +56,6 @@ void Copter::setup( void )
 
 void Copter::update_current_flight_mode(void)
 {
-#if 0
-	if(g.rc_5.radio_in>1000&&g.rc_5.radio_in<1500)
-	{
-		control_mode=ACRO;
-	}
-	else if(g.rc_5.radio_in>1500 && g.rc_5.radio_in<1900)
-	{
-		control_mode=STABILIZE;
-		//DEBUG_PRINTF("飞控模式是增稳模式\n");
-	}
-	else if(g.rc_5.radio_in>1900)
-	{
-		control_mode=AUTO;
-	}
-#endif
-
 	int8_t switch_position;
 	uint16_t mode_in;
 
@@ -98,7 +82,7 @@ void Copter::update_current_flight_mode(void)
 		break;
 	case STABILIZE:
 		DEBUG_PRINTF("飞控模式是增稳模式\n");
-		yaw_mode                 = YAW_HOLD;
+		yaw_mode                 = YAW_STABILE;
 		roll_pitch_mode 		= ROLL_PITCH_STABLE;
 		throttle_mode   		= THROTTLE_MANUAL;
 		break;
@@ -106,6 +90,22 @@ void Copter::update_current_flight_mode(void)
 	default:
 		break;
 	}
+
+#if 0
+	if(g.rc_5.radio_in>1000&&g.rc_5.radio_in<1500)
+	{
+		control_mode=ACRO;
+	}
+	else if(g.rc_5.radio_in>1500 && g.rc_5.radio_in<1900)
+	{
+		control_mode=STABILIZE;
+		//DEBUG_PRINTF("飞控模式是增稳模式\n");
+	}
+	else if(g.rc_5.radio_in>1900)
+	{
+		control_mode=AUTO;
+	}
+#endif
 }
 
 void Copter::parameter_init()
@@ -177,7 +177,8 @@ void Copter::controller_init()
 void Copter::update_all_external_device_input( void )
 {
 	/*
-	 * 这个函数其实并不需要
+	 * 这个update_all_external_device_input函数在有实际外围设备的时候就删除掉
+	 * 没有实际设备，需要仿真的时候，需要把飞行动力状态赋值给all_external_device_input
 	 */
 
 	/*
@@ -207,13 +208,14 @@ void Copter::update_all_external_device_input( void )
 	/*
 	 * 导航数据--IMU姿态传感器数据
 	 */
-	all_external_device_input.accel_x    =    1;
-	all_external_device_input.accel_y    =    2;
-	all_external_device_input.accel_z    =    3;
-	all_external_device_input.gyro_x    =    1;
-	all_external_device_input.gyro_y    =    2;
-	all_external_device_input.gyro_z    =    3;
+	all_external_device_input.accel_x    =    0;
+	all_external_device_input.accel_y    =    0;
+	all_external_device_input.accel_z    =    0;
+	all_external_device_input.gyro_x    =    0;
+	all_external_device_input.gyro_y    =    0;
+	all_external_device_input.gyro_z    =    0;
 }
+
 
 
 void Copter::loop_slow()
@@ -225,4 +227,19 @@ void Copter::end_of_task()
 {
 	DEBUG_PRINTF("Hello end_of_task\n");
 }
+
+/*
+ * 下面函数是外部设备获取数据的函数
+ */
+void Copter::external_device_imu_6050()
+{
+	IMU_6050_read_data();
+}
+void Copter::external_device_futaba()
+{
+	rc_futaba_read_data();
+}
+
+
+
 

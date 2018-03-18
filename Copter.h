@@ -240,6 +240,10 @@ public:
 	void controller_init();
 
 
+	void external_device_imu_6050();
+	void external_device_futaba();
+
+
 	void trim_radio();
 
 	void update_current_flight_mode(void);

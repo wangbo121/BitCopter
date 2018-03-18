@@ -5,10 +5,8 @@
  *      Author: wangbo
  */
 
-
-#include <iostream>
+#include <stdio.h>
 #include "ahrs_DCM.h"
-//#include "fdm.h"
 
 #define OUTPUTMODE 1				// This is just used for debugging, remove later
 #define ToRad(x) (x*0.01745329252)	// *pi/180
@@ -22,10 +20,6 @@
 #define SPEEDFILT 300				// centimeters/second
 #define ADC_CONSTRAINT 900
 
-
-
-
-/**************************************************/
 void
 AP_DCM::update_DCM(float _G_Dt)
 {
@@ -33,18 +27,8 @@ AP_DCM::update_DCM(float _G_Dt)
 	_gyro_vector 	= _imu.get_gyro();			// Get current values for IMU sensors
 	_accel_vector 	= _imu.get_accel();			// Get current values for IMU sensors
 
-
-//	std::cout<<"_gyro_vector.x="<<_gyro_vector.x<<std::endl;
-//	std::cout<<"_gyro_vector.y="<<_gyro_vector.y<<std::endl;
-//	std::cout<<"_gyro_vector.z="<<_gyro_vector.z<<std::endl;
-//
-//
-//	std::cout<<"_accel_vector.x="<<_accel_vector.x<<std::endl;
-//	std::cout<<"_accel_vector.y="<<_accel_vector.y<<std::endl;
-//	std::cout<<"_accel_vector.z="<<_accel_vector.z<<std::endl;
-
-
-
+	printf("update_DCM    :    %f,    %f,    %f\n ",_imu._accel.x, _imu._accel.x, _imu._accel.x);
+	printf("update_DCM    :    %f,    %f,    %f\n ",_imu._gyro.x, _imu._gyro.x, _imu._gyro.x);
 
 	matrix_update(_G_Dt); 	// Integrate the DCM matrix
 	normalize();			// Normalize the DCM matrix
@@ -53,8 +37,6 @@ AP_DCM::update_DCM(float _G_Dt)
 	euler_angles();			// Calculate pitch, roll, yaw for stabilization and navigation
 }
 
-/**************************************************/
-/**************************************************/
 void
 AP_DCM::matrix_update(float _G_Dt)
 {
@@ -70,60 +52,8 @@ AP_DCM::matrix_update(float _G_Dt)
 //	std::cout<<"_accel_vector.y="<<_accel_vector.y<<std::endl;
 //	std::cout<<"_accel_vector.z="<<_accel_vector.z<<std::endl;
 
-#if 0
-	//Record when you saturate any of the gyros.
-	if((fabs(_gyro_vector.x) >= radians(300)) ||
-		(fabs(_gyro_vector.y) >= radians(300)) ||
-		(fabs(_gyro_vector.z) >= radians(300))){
-		gyro_sat_count++;
-	}
-
-	_omega_integ_corr 	= _gyro_vector 		+ _omega_I;		// Used for _centripetal correction (theoretically better than _omega)
-	_omega 				= _omega_integ_corr + _omega_P;		// Equation 16, adding proportional and integral correction terms
-
-	if(_centripetal){
-		accel_adjust();				// Remove _centripetal acceleration.
-	}
-#else
 	_omega=_gyro_vector;
-#endif
-
-#if 0
- #if OUTPUTMODE == 1//20170818这个矩阵也是没有问题的呀，对的
-	update_matrix.a.x = 0;
-	update_matrix.a.y = -_G_Dt * _omega.z; 		// -delta Theta z
-	update_matrix.a.z =  _G_Dt * _omega.y; 		// delta Theta y
-	update_matrix.b.x =  _G_Dt * _omega.z; 		// delta Theta z
-	update_matrix.b.y = 0;
-	update_matrix.b.z = -_G_Dt * _omega.x; 		// -delta Theta x
-	update_matrix.c.x = -_G_Dt * _omega.y; 		// -delta Theta y
-	update_matrix.c.y =  _G_Dt * _omega.x; 		// delta Theta x
-	update_matrix.c.z = 0;
- #else										// Uncorrected data (no drift correction)
-	update_matrix.a.x = 0;
-	update_matrix.a.y = -_G_Dt * _gyro_vector.z;
-	update_matrix.a.z =  _G_Dt * _gyro_vector.y;
-	update_matrix.b.x =  _G_Dt * _gyro_vector.z;
-	update_matrix.b.y = 0;
-	update_matrix.b.z = -_G_Dt * _gyro_vector.x;
-	update_matrix.c.x = -_G_Dt * _gyro_vector.y;
-	update_matrix.c.y =  _G_Dt * _gyro_vector.x;
-	update_matrix.c.z = 0;
- #endif
-
-	temp_matrix = _dcm_matrix * update_matrix;
-	_dcm_matrix = _dcm_matrix + temp_matrix;		// Equation 17
-#else
 	_dcm_matrix.rotate(_omega*_G_Dt);
-
-#endif
-
-
-//	std::cout<<"apm !!!_dcm_matrix.c.x="<<_dcm_matrix.c.x<<std::endl;
-
-
-
-
 }
 
 
@@ -132,7 +62,6 @@ void
 AP_DCM::accel_adjust(void)
 {
 	Vector3f veloc, temp;
-	float vel;
 
 	//veloc.x = _gps.ground_speed / 100;		// We are working with acceleration in m/s^2 units
 
@@ -178,8 +107,8 @@ AP_DCM::normalize(void)
 	_dcm_matrix.b = renorm(temporary[1], problem);
 	_dcm_matrix.c = renorm(temporary[2], problem);
 
-
-	if (problem == 1) {		// Our solution is blowing up and we will force back to initial condition.	Hope we are not upside down!
+	if (problem == 1)
+	{	// Our solution is blowing up and we will force back to initial condition.	Hope we are not upside down!
 		_dcm_matrix.a.x = 1.0f;
 		_dcm_matrix.a.y = 0.0f;
 		_dcm_matrix.a.z = 0.0f;
@@ -258,52 +187,6 @@ AP_DCM::drift_correction(void)
 	_omega_P = _error_roll_pitch * (Kp_ROLLPITCH * accel_weight);
 	_omega_I += _error_roll_pitch * (Ki_ROLLPITCH * accel_weight);
 
-
-	//*****YAW***************
-
-//	if (&_compass) {
-//		// We make the gyro YAW drift correction based on compass magnetic heading
-//		error_course = (_dcm_matrix.a.x * _compass.heading_y) - (_dcm_matrix.b.x * _compass.heading_x);	// Equation 23, Calculating YAW error
-//
-//	} else {
-//
-//		// Use GPS Ground course to correct yaw gyro drift
-//		if (_gps.ground_speed >= SPEEDFILT) {
-//			_course_over_ground_x = cos(ToRad(_gps.ground_course/100.0));
-//			_course_over_ground_y = sin(ToRad(_gps.ground_course/100.0));
-//			if(in_motion) {
-//				error_course = (_dcm_matrix.a.x * _course_over_ground_y) - (_dcm_matrix.b.x * _course_over_ground_x);	// Equation 23, Calculating YAW error
-//			} else  {
-//				float cos_psi_err, sin_psi_err;
-//				// This is the case for when we first start moving and reset the DCM so that yaw matches the gps ground course
-//				// This is just to get a reasonable estimate faster
-//				yaw = atan2(_dcm_matrix.b.x, _dcm_matrix.a.x);
-//				cos_psi_err = cos(ToRad(_gps.ground_course/100.0) - yaw);
-//				sin_psi_err = sin(ToRad(_gps.ground_course/100.0) - yaw);
-//				// Rxx = cos psi err, Rxy = - sin psi err, Rxz = 0
-//				// Ryx = sin psi err, Ryy = cos psi err,   Ryz = 0
-//				// Rzx = Rzy = 0, Rzz = 1
-//				rot_mat.a.x = cos_psi_err;
-//				rot_mat.a.y = -sin_psi_err;
-//				rot_mat.b.x = sin_psi_err;
-//				rot_mat.b.y = cos_psi_err;
-//				rot_mat.a.z = 0;
-//				rot_mat.b.z = 0;
-//				rot_mat.c.x = 0;
-//				rot_mat.c.y = 0;
-//				rot_mat.c.z = 1.0;
-//
-//				_dcm_matrix = rot_mat * _dcm_matrix;
-//				in_motion =  true;
-//				error_course = 0;
-//
-//			}
-//		} else {
-//			error_course = 0;
-//			in_motion = false;
-//		}
-//	}
-
 	_error_yaw = _dcm_matrix.c * error_course;	// Equation 24, Applys the yaw correction to the XYZ rotation of the aircraft, depeding the position.
 
 	_omega_P += _error_yaw * Kp_YAW;			// Adding yaw correction to proportional correction vector.
@@ -322,13 +205,6 @@ AP_DCM::drift_correction(void)
 void
 AP_DCM::euler_angles(void)
 {
-	//#if (OUTPUTMODE == 2)				 // Only accelerometer info (debugging purposes)
-#if 0				 // Only accelerometer info (debugging purposes)
-	//20170818这个是这里用加速度计的，肯定不行呀
-	roll 		= atan2(_accel_vector.y, -_accel_vector.z);		// atan2(acc_y, acc_z)
-	pitch 		= asin((_accel_vector.x) / (double)9.81); // asin(acc_x)
-	yaw 			= 0;
-#else
 	pitch 		= -asin(_dcm_matrix.c.x);
 	roll 		= atan2(_dcm_matrix.c.y, _dcm_matrix.c.z);
 	yaw 		= atan2(_dcm_matrix.b.x, _dcm_matrix.a.x);
@@ -340,31 +216,13 @@ AP_DCM::euler_angles(void)
 	pitch=p;
 	yaw=y;
 
-
-#endif
-
 	roll_sensor 	= degrees(roll)  * 100;
 	pitch_sensor 	= degrees(pitch) * 100;
 	yaw_sensor 		= degrees(yaw)   * 100;
 
 	if (yaw_sensor < 0)
 		yaw_sensor += 36000;
-
-
-//	std::cout<<"roll_sensor_cd="<<roll_sensor<<std::endl;
-//	std::cout<<"pitch_sensor_cd="<<pitch_sensor<<std::endl;
-//	std::cout<<"yaw_sensor_cd="<<yaw_sensor<<std::endl;
-//
-//	std::cout<<"fdm_feed_back roll_cd="<<degrees(fdm_feed_back.phi)*100.0<<std::endl;
-//	std::cout<<"fdm_feed_back pitch_cd="<<degrees(fdm_feed_back.theta)*100.0<<std::endl;
-//	std::cout<<"fdm_feed_back yaw_cd="<<degrees(fdm_feed_back.psi)*100.0<<std::endl;
-
-//	roll_sensor=(int)(degrees(fdm_feed_back.phi))*100;
-//	pitch_sensor=(int)(degrees(fdm_feed_back.theta))*100;
-//	yaw_sensor=(int)(degrees(fdm_feed_back.psi))*100;
 }
-
-/**************************************************/
 
 float
 AP_DCM::get_health(void)
@@ -386,7 +244,6 @@ AP_DCM::degrees(float rad)
     return rad * RAD_TO_DEG;
 }
 
-
 float
 AP_DCM::dcm_constrain(float m,float a,float b)
 {
@@ -395,12 +252,4 @@ AP_DCM::dcm_constrain(float m,float a,float b)
 
 	return m;
 }
-
-#if 0
-AP_DCM::AP_DCM()
-{
-
-
-}
-#endif
 

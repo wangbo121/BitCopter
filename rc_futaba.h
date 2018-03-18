@@ -37,7 +37,8 @@ int rc_futaba_init();
  * 该函数读取futaba遥控器的信号，
  * 并将遥控器信号存入到all_external_device_input中去
  */
-int rc_futaba_read_data(unsigned char *buf, unsigned int len);
+//int rc_futaba_read_data(unsigned char *buf, unsigned int len);
+void rc_futaba_read_data();
 
 
 

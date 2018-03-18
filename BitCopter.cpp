@@ -25,6 +25,8 @@
 
 const BIT_Scheduler::Task Copter::scheduler_tasks[] =
 {
+		{ SCHED_TASK(external_device_imu_6050),                                                  10,     900 },
+
 //      { SCHED_TASK(update_GPS),                                                  10,     900 },
 //      { SCHED_TASK(set_rc_out),                                                    100,     100 },
 //
@@ -123,34 +125,28 @@ void Copter::loop_fast()
 	 * 只需要下面5步骤就可以了
 	 * 其他的都是用来与地面站通信然后实现自动驾驶的，比如气压计，空速计，gps，导航，航点等
 	 * 1--read_radio
-	 * 2--update_DCM
-	 * 3--update_current_flight_mode
-	 * 4--control根据飞行模式 control_mode的选项，选择不同的控制方式
-	 * 5--set_servos
+	 * 2--update_current_flight_mode
+	 * 3--control根据飞行模式 control_mode的选项，选择不同的控制方式
+	 * 4--set_servos
+	 * 5--update_DCM
 	 */
 
 	G_Dt=0.01;//G_Dt是dcm积分要用的，这个设置为0.01秒也就是100hz主要是为了跟sim_aircraft的速率一致，但是其实20ms(50hz)就够
 
 	/*
-	 * 1--读取接收机的信号，获取遥控器各个通道
+	 * 1--读取接收机的信号，获取遥控器各个通道值，radio_in
 	 */
 	read_radio();
-	//下面的设置遥控器其实是不需要的，应该按照从地面站或者从遥控器的第五通道来决定飞行模式
-	//g.channel_rudder.set_pwm(1600);//这个set_pwm参数的范围是1000～2000
-	//g.channel_pitch.set_pwm(1600);//这个set_pwm参数的范围是1000～2000，把pitch一直设置为1600，看能不能稳定在9度左右
-	//g.rc_5.set_pwm(1400);//rc_5大于1500时，是增稳控制状态
-	//g.rc_5.set_pwm(1600);//rc_5大于1500时，是增稳控制状态
-	//g.rc_5.set_pwm(1990);//rc_5大于1900时，是绕航点飞行状态
 
 	/*
-	 * 3--刷新控制状态，从而选择控制方式
+	 * 2--刷新控制状态，从而选择控制方式
 	 * 设置yaw_mode roll_pitch_mode throttle_mode的模式
 	 * 然后update_roll_pitch_mode，update_yaw_mode，update_throttle_mode要用
 	 */
 	update_current_flight_mode();
 
 	/*
-	 * 4--把期望的roll pitch yaw作用于飞机
+	 * 3--把期望的roll pitch yaw作用于飞机
 	 */
 	switch(control_mode)
 	{
@@ -186,11 +182,13 @@ void Copter::loop_fast()
 		break;
 	}
 
-	/* 5--把计算所得控制量输出给电机 */
+	/*
+	 * 4--把计算所得控制量输出给电机
+	 */
 	motors_output();
 
 	/*
-	 * 2--更新姿态，获取飞机现在的姿态角
+	 * 5--更新姿态，获取飞机现在的姿态角
 	 */
 	ahrs.update_DCM(G_Dt);
 

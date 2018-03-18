@@ -20,6 +20,9 @@
 #endif
 
 #define UART_FUTABA "/dev/ttyO1"
+//
+//#define UART_MPU_6050 "/dev/ttyUSB0"
+#define UART_FUTABA "/dev/ttyUSB1"
 
 // YAW debug
 // ---------

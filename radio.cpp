@@ -64,7 +64,7 @@ void Copter::rc_in_init()
 	// set rc channel ranges
 	g.channel_roll.set_angle(4500);//set_angle做了两件事，一是把_high变量赋值，一是设置type是角度[-4500~+4500]还是范围[0~+1000]
 	g.channel_pitch.set_angle(4500);
-	g.channel_throttle.set_range(0, 1000);//注意这里是set_range;
+	g.channel_throttle.set_range(0, 1000);//注意这里是set_range;！！！！！！误删除
 	g.channel_rudder.set_angle(4500);
 
     //set auxiliary ranges
@@ -126,9 +126,6 @@ void Copter::read_radio()
 	std::cout<<"g.rc_5.control_in="<<g.rc_5.control_in<<std::endl;
 	*/
 }
-
-
-
 
 void Copter::trim_radio()
 {
